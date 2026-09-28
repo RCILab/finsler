@@ -48,7 +48,7 @@ class Arm:
 
     def __init__(self, l1=0.425, l2=0.392, m1=8.39, m2=3.50, payload=5.0,
                  w=(2.094, 2.094), p_max=60.0,
-                 workpiece=None, e_max=2.0, zone=0.35, r_min=0.26, r_max=0.76):
+                 workpiece=None, e_max=2.0, zone=0.35, r_min=0.26, r_max=0.76, table_y=-0.50):
         self.l1, self.l2, self.m1, self.m2, self.mp = l1, l2, m1, m2, payload
         self.w = np.asarray(w, float)
         self.p_max = p_max
@@ -57,6 +57,10 @@ class Arm:
         # the Jacobian degenerates at the folded (r -> 0) and fully extended (r -> l1 + l2)
         # configurations, where the gauge of some directions collapses; keep planning inside an annulus
         self.r_min, self.r_max = r_min, r_max
+        # the arm stands on a narrow 0.45 m pedestal, so the binding obstacle is the floor rather than a
+        # table top: measured from the shoulder it lies 0.61 m below, and table_y keeps a margin on that
+        # for the elbow as well as the hand.
+        self.table_y = table_y
 
     def inertia(self, q):
         """Joint-space inertia of the two-link arm with a point payload at the tip."""
@@ -88,7 +92,9 @@ class Arm:
         x = np.atleast_2d(np.asarray(x, float))
         r2 = np.sum(x ** 2, 1)
         c2 = np.clip((r2 - self.l1 ** 2 - self.l2 ** 2) / (2 * self.l1 * self.l2), -1.0, 1.0)
-        q2 = np.arccos(c2)                                   # elbow-up
+        # negative branch: the elbow sits ABOVE the shoulder-to-hand line, which is the posture that
+        # keeps a table-mounted arm clear of its own table
+        q2 = -np.arccos(c2)
         k1 = self.l1 + self.l2 * np.cos(q2)
         k2 = self.l2 * np.sin(q2)
         q1 = np.arctan2(x[:, 1], x[:, 0]) - np.arctan2(k2, k1)
@@ -141,7 +147,12 @@ class Arm:
             active = dist < self.zone
             F = np.maximum(F, np.where(active, closing / np.maximum(v_safe, 1e-9), 0.0))
         r = np.linalg.norm(x, axis=1)
-        return np.where((r < self.r_min) | (r > self.r_max), 1e6, F)
+        bad = (r < self.r_min) | (r > self.r_max) | (self.elbow_y(x) < self.table_y) | (x[:, 1] < self.table_y)
+        return np.where(bad, 1e6, F)
+
+    def elbow_y(self, x):
+        """Height of the elbow of the elbow-up solution, measured from the shoulder."""
+        return self.l1 * np.sin(self.ik(x)[:, 0])
 
     def max_speed(self, x, dirs):
         """Speed available in each unit direction (1 / gauge)."""
@@ -182,7 +193,9 @@ class EuclideanField:
         f = np.linalg.norm(v, axis=1) / self.scale
         if self.arm is not None:
             r = np.linalg.norm(x, axis=1)
-            f = np.where((r < self.arm.r_min) | (r > self.arm.r_max), 1e6, f)
+            bad = ((r < self.arm.r_min) | (r > self.arm.r_max)
+                   | (self.arm.elbow_y(x) < self.arm.table_y) | (x[:, 1] < self.arm.table_y))
+            f = np.where(bad, 1e6, f)
         return f
 
 

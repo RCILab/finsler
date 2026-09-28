@@ -227,24 +227,31 @@ pre{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;p
 
   <h3>Not only legs: a UR5, and effective mass</h3>
   <p>A manipulator looks like the symmetric case until you ask what limits it. Effective mass
-  \(m_{\mathrm{eff}}(u)=(u^\top\Lambda^{-1}u)^{-1}\) is quadratic in \(u\), so by itself it is reversible.
+  \(m_{\mathrm{eff}}(u)=(u^	op\Lambda^{-1}u)^{-1}\) is quadratic in \(u\), so by itself it is reversible.
   The asymmetry arrives with the constraint: capping the energy transferred on contact bounds how fast the
   arm may <em>close</em> on a workpiece, by \(\sqrt{2E_{\max}/m_{\mathrm{eff}}}\), and leaves retreat
   unbounded.</p>
+
+  <p>What that buys an arm is not the same as what it buys a walking robot, and the difference is worth
+  being precise about. The symmetrised metric picks routes within <b>1.0 %</b> of optimal here, so route
+  selection barely changes. What it gets badly wrong is the clock.</p>
+
   <figure>
     <video src="assets/v5_ur5_effective_mass.mp4" autoplay loop muted playsinline controls></video>
-    <figcaption><b>A UR5e reaching a workpiece under a power-and-force limit, rendered in MuJoCo.</b> The dotted
-    trail is the path each plan actually walks; the black sphere is the workpiece. The symmetrised metric keeps
-    every bit of the anisotropy and discards only the asymmetry, which is enough to cost it <b>7.7 %</b>;
-    an isotropic metric costs 13.7 %. The time-optimal plan moves across the constraint and closes from the
-    direction in which the arm is light.</figcaption>
+    <figcaption><b>The same plan, played on two clocks, on a UR5e in MuJoCo.</b> Both panels execute the
+    plan the symmetrised metric produced. The left runs it at the speed that metric believes it can hold;
+    the right runs it at the speed the arm actually has, because the end effector rises at 0.51 m/s where
+    it descends at 0.78. The plan arrives <b>54 % later</b> than its own planner expected, and
+    <b>45 %</b> later on average over four approaches. For a manipulator the non-reversible geometry buys
+    a travel time you can believe, which is what a cycle-time budget consumes, rather than a shorter
+    route.</figcaption>
     <div class="vmeta">MuJoCo UR5e (mujoco_menagerie) · joint angles solved against the model · real time</div>
   </figure>
 
-  <p>Gravity, by contrast, changes nothing about the routes, and our own theory says why: gravitational
-  power is the derivative of a potential, so the asymmetric part of the metric is a closed one-form and
-  only travel times change. The symmetrised metric plans within 0.4 % of optimal. Asymmetries that move
-  routes are the ones with non-vanishing curl.</p>
+  <p>Gravity, by contrast, changes nothing about the routes either, and our own theory says why:
+  gravitational power is the derivative of a potential, so the asymmetric part of the metric is a closed
+  one-form and only travel times change. The asymmetries that <em>do</em> move routes are the ones with
+  non-vanishing curl, which is what the legged and drift-field settings above have.</p>
 
   <h3>When the environment is the asymmetry</h3>
   <p>Asymmetry does not need legs. A head-wind channel makes eastward motion cost more than westward at the
