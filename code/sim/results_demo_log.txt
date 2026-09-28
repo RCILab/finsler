@@ -1,0 +1,30 @@
+C:\Users\ggory\Desktop\new manifold\claude_try\sim\demo_turn_or_reverse.py:86: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\torch\csrc\autograd\generated\python_variable_methods.cpp:821.)
+  return A, b, dict(n_ok=int(ok.sum()), n_boundary=int(boundary.sum()), loss=float(loss), speeds=SE2Randers(A, b).speeds())
+fitted envelope from sweep: {"n_ok": 535, "n_boundary": 147, "loss": 0.053} speeds {'forward': 1.35, 'backward': 1.4, 'left': 1.26, 'right': 1.25, 'yaw+': 1.62, 'yaw-': 1.7}
+symmetric part speeds: {'forward': 1.37, 'backward': 1.37, 'left': 1.25, 'right': 1.25, 'yaw+': 1.66, 'yaw-': 1.66}
+C:\Users\ggory\AppData\Local\Programs\Python\Python312\Lib\site-packages\torch\jit\_serialization.py:176: FutureWarning: `torch.jit.load` is deprecated. Please switch to `torch.export`.
+  warnings.warn(
+  behind, same heading       finsler  : arrived True, t = 2.40 s, planned 1.79 s, fallen False  (1s)
+  behind, same heading       symmetric: arrived True, t = 2.88 s, planned 1.82 s, fallen False  (1s)
+  behind, reversed heading   finsler  : arrived True, t = 4.52 s, planned 2.60 s, fallen False  (1s)
+  behind, reversed heading   symmetric: arrived True, t = 3.30 s, planned 2.63 s, fallen False  (1s)
+  left, same heading         finsler  : arrived True, t = 3.16 s, planned 1.59 s, fallen False  (1s)
+  left, same heading         symmetric: arrived True, t = 2.40 s, planned 1.60 s, fallen False  (0s)
+  ahead, same heading        finsler  : arrived True, t = 2.68 s, planned 1.85 s, fallen False  (1s)
+  ahead, same heading        symmetric: arrived True, t = 2.74 s, planned 1.82 s, fallen False  (1s)
+# H1-2 MuJoCo demo: goal behind / beside, identified envelope vs symmetric part
+
+identified envelope speeds (m/s, rad/s): {forward: 1.35, backward: 1.40, left: 1.26, right: 1.25, yaw+: 1.62, yaw-: 1.70}; symmetric part: {forward: 1.37, backward: 1.37, left: 1.25, right: 1.25, yaw+: 1.66, yaw-: 1.66}
+
+| task | planner envelope | arrived | arrival time [s] | planner's own estimate [s] | fell |
+|---|---|---:|---:|---:|---:|
+| behind, same heading | finsler | True | 2.40 | 1.79 | False |
+| behind, same heading | symmetric | True | 2.88 | 1.82 | False |
+| behind, reversed heading | finsler | True | 4.52 | 2.60 | False |
+| behind, reversed heading | symmetric | True | 3.30 | 2.63 | False |
+| left, same heading | finsler | True | 3.16 | 1.59 | False |
+| left, same heading | symmetric | True | 2.40 | 1.60 | False |
+| ahead, same heading | finsler | True | 2.68 | 1.85 | False |
+| ahead, same heading | symmetric | True | 2.74 | 1.82 | False |
+wrote C:\Users\ggory\Desktop\new manifold\claude_try\sim\results

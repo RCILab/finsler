@@ -1,0 +1,20 @@
+C:\Users\ggory\AppData\Local\Programs\Python\Python312\Lib\site-packages\torch\jit\_serialization.py:176: FutureWarning: `torch.jit.load` is deprecated. Please switch to `torch.export`.
+  warnings.warn(
+  20/80 directions (35s)
+  40/80 directions (78s)
+  60/80 directions (119s)
+  80/80 directions (161s)
+# H1-2 (MuJoCo, Unitree pretrained policy) velocity envelope identification
+400 rollouts: 80 directions x 5 magnitudes; hold 5.0 s, achieved = mean of last 3 s; falls 0
+
+| axis | max achieved (no fall) | command at which it saturates (achieved/cmd < 0.85) |
+|---|---:|---|
+| +vx (forward) | 1.13 | 1.30 |
+| -vx (backward) | 0.49 | 0.88 |
+| +vy (left) | 0.37 | 0.28 |
+| -vy (right) | 0.36 | 0.27 |
+| +yaw | 1.10 | 1.72 |
+| -yaw | 1.01 | 0.54 |
+
+fall rate by magnitude: 0.3: 0.00, 0.6: 0.00, 0.9: 0.00, 1.2: 0.00, 1.5: 0.00
+wrote C:\Users\ggory\Desktop\new manifold\claude_try\sim\results

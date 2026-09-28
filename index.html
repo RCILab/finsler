@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finsler Flow Matching</title>
+<meta name="description" content="There and Back Are Not the Same: Finsler Flow Matching for Asymmetric Robot Planning. A robot's forward is not its backward — make that the geometry, then amortize time-optimal planning into one network pass.">
+<meta property="og:title" content="Finsler Flow Matching — There and Back Are Not the Same">
+<meta property="og:description" content="Asymmetric robot velocity envelopes define a non-reversible Finsler metric whose forward distance is the minimum travel time. Flow matching amortizes its geodesics into millisecond planning.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#8734;</text></svg>">
+<script>
+window.MathJax = {tex: {inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']]}, svg: {fontCache: 'global'}};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{
+  --surface:#fcfcfb; --surface-2:#f4f3ef; --ink:#0b0b0b; --ink-2:#52514e; --ink-3:#8a8880;
+  --line:#e1e0d9; --blue:#2a78d6; --orange:#eb6834; --aqua:#1baf7a; --yellow:#eda100;
+  --maxw:1120px; --radius:10px;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,"Noto Sans KR",sans-serif;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--surface);color:var(--ink);font-family:var(--sans);
+     font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.skip{position:absolute;left:-9999px}
+.skip:focus{left:8px;top:8px;background:#fff;padding:8px 12px;z-index:99;border:1px solid var(--line)}
+
+/* nav */
+nav{position:sticky;top:0;z-index:50;background:rgba(252,252,251,.93);
+    backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:26px;height:56px}
+nav .brand{font-weight:700;letter-spacing:-.01em;color:var(--ink);white-space:nowrap}
+nav .links{display:flex;gap:22px;margin-left:auto;flex-wrap:wrap}
+nav .links a{color:var(--ink-2);font-size:14.5px;font-weight:500}
+nav .links a:hover{color:var(--blue);text-decoration:none}
+
+/* hero */
+header{padding:64px 0 44px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+h1{font-size:clamp(34px,5.4vw,58px);line-height:1.06;letter-spacing:-.025em;margin:16px 0 10px;font-weight:800}
+.subtitle{font-size:clamp(18px,2.4vw,25px);color:var(--ink-2);font-weight:500;margin:0 0 22px;line-height:1.35}
+.tagline{font-size:19px;max-width:70ch;color:var(--ink);margin:0 0 26px}
+.tagline em{color:var(--blue);font-style:normal;font-weight:600}
+.authors{color:var(--ink-2);font-size:15.5px;margin-bottom:26px}
+.btns{display:flex;gap:11px;flex-wrap:wrap;margin-bottom:20px}
+.btn{display:inline-block;padding:11px 19px;border-radius:999px;border:1px solid var(--ink);
+     background:var(--ink);color:#fff;font-size:15px;font-weight:600}
+.btn:hover{background:#000;text-decoration:none}
+.btn.alt{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.alt:hover{border-color:var(--ink-3);background:var(--surface-2)}
+.notice{font-size:14.5px;color:var(--ink-2);background:var(--surface-2);border-left:3px solid var(--yellow);
+        padding:11px 16px;border-radius:0 6px 6px 0;max-width:72ch}
+
+/* sections */
+section{padding:60px 0;border-bottom:1px solid var(--line)}
+.sec-no{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);font-weight:700;margin-bottom:10px}
+h2{font-size:clamp(25px,3.4vw,36px);line-height:1.16;letter-spacing:-.02em;margin:0 0 18px;font-weight:750}
+h3{font-size:21px;margin:38px 0 10px;letter-spacing:-.01em;font-weight:700}
+p{max-width:74ch}
+.lead{font-size:19px;color:var(--ink)}
+.muted{color:var(--ink-2)}
+.small{font-size:15px}
+
+/* video */
+figure{margin:26px 0 0}
+video{width:100%;display:block;border-radius:var(--radius);background:#eee;border:1px solid var(--line)}
+figcaption{font-size:15px;color:var(--ink-2);margin-top:11px;max-width:84ch}
+figcaption b{color:var(--ink)}
+.vmeta{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);margin-top:6px;letter-spacing:.01em}
+
+/* pipeline */
+.pipe{display:flex;gap:9px;flex-wrap:wrap;align-items:stretch;margin:26px 0 8px}
+.pipe .step{flex:1 1 150px;border:1px solid var(--line);border-radius:var(--radius);padding:14px 15px;background:#fff}
+.pipe .step b{display:block;font-size:14.5px;margin-bottom:3px}
+.pipe .step span{font-size:13.5px;color:var(--ink-2)}
+.pipe .arrow{align-self:center;color:var(--ink-3);font-size:19px}
+
+/* tables */
+.tbl{overflow-x:auto;margin:22px 0}
+table{border-collapse:collapse;width:100%;font-size:15.5px}
+th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);
+         border-bottom:1.5px solid var(--ink-3);font-weight:700}
+tbody tr.ours{background:rgba(42,120,214,.07)}
+tbody tr.ours td{font-weight:650}
+td.good{color:var(--blue)}
+caption{caption-side:bottom;text-align:left;font-size:14.5px;color:var(--ink-2);padding-top:10px}
+
+/* callout */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:22px;margin:26px 0}
+.card{border:1px solid var(--line);border-radius:var(--radius);padding:19px 21px;background:#fff}
+.card h4{margin:0 0 7px;font-size:16.5px}
+.card p{font-size:15px;color:var(--ink-2);margin:0}
+.pitfall{border-left:3px solid var(--orange)}
+.key{border-left:3px solid var(--blue)}
+
+/* lineage + footer */
+.lineage{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:20px}
+.lineage .node{border:1px solid var(--line);border-radius:999px;padding:9px 17px;font-size:14.5px;background:#fff}
+.lineage .node b{display:block;font-size:13px;color:var(--ink-3);font-weight:600}
+.lineage .node.now{border-color:var(--blue);background:rgba(42,120,214,.07)}
+footer{padding:52px 0 64px;text-align:center;color:var(--ink-2)}
+footer .ftitle{font-size:26px;font-weight:800;color:var(--ink);letter-spacing:-.02em}
+pre{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:15px 17px;
+    overflow-x:auto;font-family:var(--mono);font-size:13.5px;line-height:1.55}
+@media (max-width:640px){
+  nav .links{gap:14px}
+  nav .links a{font-size:13px}
+  body{font-size:16px}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<nav><div class="wrap">
+  <span class="brand">Finsler Flow Matching</span>
+  <span class="links">
+    <a href="#idea">The idea</a>
+    <a href="#motion">See it in motion</a>
+    <a href="#method">Method</a>
+    <a href="#results">Results</a>
+    <a href="#resources">Paper &amp; resources ↗</a>
+  </span>
+</div></nav>
+
+<header><div class="wrap" id="main">
+  <div class="eyebrow">RCI Lab · Kyung Hee University</div>
+  <h1>There and Back<br>Are Not the Same</h1>
+  <div class="subtitle">Finsler Flow Matching for Asymmetric Robot Planning</div>
+  <p class="tagline">A legged robot walks forward faster than it walks backward, and sideways slower still.
+  Reversible geometry cannot say that. We make the asymmetry <em>the geometry itself</em>, and amortize
+  time-optimal planning into a single pass of a learned flow.</p>
+  <div class="authors">Anonymous authors · under review</div>
+  <div class="btns">
+    <a class="btn" href="#motion">Watch the videos ↘</a>
+    <a class="btn alt" href="assets/finsler_flow_matching_paper.pdf">Paper PDF</a>
+    <a class="btn alt" href="assets/finsler_flow_matching_supplement.pdf">Supplement PDF</a>
+    <a class="btn alt" href="assets/finsler_code.zip">Code ZIP</a>
+  </div>
+  <p class="notice">In preparation for submission to <b>Robotics: Science and Systems (RSS)</b>.
+  Results on this page are from simulation; the quadruped hardware study is in progress.</p>
+</div></header>
+
+<!-- ================================================================= 01 -->
+<section id="idea"><div class="wrap">
+  <div class="sec-no">01 / The central idea</div>
+  <h2>Forward is not backward</h2>
+  <p class="lead">The set of velocities a robot can actually hold at a configuration — its
+  <b>velocity envelope</b> \(\mathcal{B}(q)\) — is a convex body that is <b>not centered on the origin</b>.
+  Forward 1.2 m/s, backward 0.5, sideways 0.4. A Riemannian metric measures \(\|v\|_G=\|-v\|_G\),
+  so it can express that sideways is expensive, but never that backward is expensive.
+  It is structurally blind to exactly the asymmetry that legged robots have.</p>
+
+  <figure>
+    <video src="assets/v1_envelope.mp4" autoplay loop muted playsinline controls></video>
+    <figcaption><b>What a reversible metric throws away.</b> Left: the true envelope (blue) against the best
+    symmetric stand-in (orange dashed) — the same ellipse fitted without the offset. Right: how far the robot
+    really gets driving straight for \(t\) seconds. The symmetric model reports arrival at a goal 2.5 m behind
+    after 3.5 s; backing up truly takes 5.0 s.</figcaption>
+    <div class="vmeta">quadruped-class envelope · forward 1.2 / backward 0.5 / lateral 0.4 m/s · loops</div>
+  </figure>
+
+  <h3>The envelope <em>is</em> a metric</h3>
+  <p>Take the gauge function of the envelope,</p>
+  \[ F(q,v)=\inf\{\alpha>0:\ v/\alpha\in\mathcal{B}(q)\}, \]
+  <p>which is positively one-homogeneous and convex but <b>not even</b>: \(F(q,v)\neq F(q,-v)\).
+  That is a Finsler metric, and its forward distance is exactly the minimum travel time:</p>
+  \[ T^\star(q_s,q_g)=\inf_{\gamma}\int_0^1 F(\gamma,\dot\gamma)\,dt \;=\; d_F(q_s,q_g). \]
+  <p>Nothing here is a cost we designed. Measure the envelope from rollouts, and the time-optimal planning
+  geometry follows. The minimum-time plan is a forward geodesic traversed on the envelope boundary.</p>
+
+  <div class="grid2">
+    <div class="card key"><h4>Why this is worth the trouble</h4>
+    <p>A planner built on the symmetric part of the envelope backs up at the wrong speed, approaches goals
+    from the wrong side, and misjudges its own travel time. The error is systematic, not noise.</p></div>
+    <div class="card pitfall"><h4>Why it is not free</h4>
+    <p>Finsler geodesics cost what any time-optimal control solution costs: a boundary value problem per
+    query, or a graph search whose memory grows exponentially with dimension. That is what we amortize.</p></div>
+  </div>
+</div></section>
+
+<!-- ================================================================= 02 -->
+<section id="motion"><div class="wrap">
+  <div class="sec-no">02 / See it in motion</div>
+  <h2>The same goal, two geometries</h2>
+  <p class="lead">Every video below compares planners that receive the same information and differ only in
+  the geometry of the paths they were trained on. Clocks run in real time.</p>
+
+  <h3>A goal behind the robot</h3>
+  <figure>
+    <video src="assets/v2_goal_behind.mp4" autoplay loop muted playsinline controls></video>
+    <figcaption><b>Turn and walk, or back up.</b> Both plans come from the same network architecture and the
+    same training pairs. The symmetric planner cannot tell reversing from walking, so it reverses along a
+    shallow arc. The Finsler planner turns toward the goal, walks forward, and aligns the heading at the end
+    — a maneuver nobody scripted; it falls out of the geometry.</figcaption>
+    <div class="vmeta">SE(2) pose planning · learned flow integrated with RK4 · real time</div>
+  </figure>
+
+  <h3>On the robot</h3>
+  <figure>
+    <video src="assets/v3_h1_2_behind_reversed.mp4" autoplay loop muted playsinline controls></video>
+    <figcaption><b>Unitree H1-2, MuJoCo, goal 2.5 m behind with the heading reversed.</b> The envelope is
+    identified from a command sweep of the robot's own locomotion policy, then handed to the planner, whose
+    body-velocity commands the policy tracks. Knowing the asymmetry arrives <b>29 % earlier</b>:
+    <b>4.76 s</b> against 6.70 s. Neither run falls.</figcaption>
+    <div class="vmeta">MuJoCo 3.13 · Unitree pretrained velocity-command policy at 50 Hz · commands at 20 Hz · real time</div>
+  </figure>
+
+  <figure>
+    <video src="assets/v3_h1_2_left.mp4" autoplay loop muted playsinline controls></video>
+    <figcaption><b>Same robot, goal 2 m to the side.</b> The symmetric planner sidesteps at the averaged
+    speed; the asymmetric one turns into its fast direction. <b>3.98 s</b> against 5.20 s, a 23 % saving.</figcaption>
+    <div class="vmeta">same identified envelope · same feedback rule · real time</div>
+  </figure>
+
+  <h3>When the environment is the asymmetry</h3>
+  <p>Asymmetry does not need legs. A head-wind channel makes eastward motion cost more than westward at the
+  same place — a drift field, and Zermelo's classical navigation problem, whose solutions are Randers geodesics.</p>
+  <figure>
+    <video src="assets/v4_channel.mp4" autoplay loop muted playsinline controls></video>
+    <figcaption><b>Three planners, one start, one goal.</b> The Euclidean flow drives straight into the
+    channel core and crawls at 0.1 m/s. The Riemannian flow knows the wind is anisotropic but not which way it
+    blows, so it detours and still enters upwind. The Finsler flow detours wide and enters the goal downwind,
+    reproducing the structure of the Zermelo-optimal path. <b>6.8 s against 19.3 s</b> for this start, which is
+    the median case among the starts shown in the paper.</figcaption>
+    <div class="vmeta">planar Randers field, β = 0.9 · goal-conditioned flow · real time</div>
+  </figure>
+</div></section>
+
+<!-- ================================================================= 03 -->
+<section id="method"><div class="wrap">
+  <div class="sec-no">03 / The method</div>
+  <h2>Geodesics in, one network pass out</h2>
+
+  <div class="pipe">
+    <div class="step"><b>Rollouts</b><span>sweep body-velocity commands, record what is achieved</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>Envelope \(\hat{\mathcal{E}}\)</b><span>fit the indicatrix \(\{F=1\}\)</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>Geodesics</b><span>\(\mathrm{Exp}^F,\ \mathrm{Log}^F\) — time-optimal paths</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>Flow matching</b><span>\(v_\theta(t,q\mid q_g,\hat{\mathcal{E}})\)</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>Plan</b><span>one ODE solve, 13–29 ms</span></div>
+  </div>
+
+  <p>The conditional probability paths of the flow model are the minimizing Finsler geodesics, traversed at
+  constant Finsler speed:</p>
+  \[ q_t=\mathrm{Exp}^F_{q_0}\!\big(t\,\mathrm{Log}^F_{q_0}(q_1)\big). \]
+  <p>Integrating the trained field from a start pose <em>is</em> the plan; its Finsler length is its travel
+  time, and its final speed predicts the time still to go. Two things break if you simply swap a Riemannian
+  metric for a Finsler one, and both are easy to get wrong.</p>
+
+  <div class="grid2">
+    <div class="card pitfall">
+      <h4>Pitfall 1 — the direction to the goal is not the negative gradient</h4>
+      <p>For a non-reversible metric, \(\nabla^F(-f)\neq-\nabla^F f\). The initial velocity of the geodesic
+      that actually reaches \(x_1\) is \(\mathcal{L}^{-1}(-d\rho)\), the inverse Legendre transform of the
+      distance differential, not \(-\nabla^F\rho\). Shooting along the negative gradient misses the goal even
+      for a constant Randers metric.</p>
+    </div>
+    <div class="card pitfall">
+      <h4>Pitfall 2 — do not weight the loss by \(g_{u_t}\)</h4>
+      <p>The Finsler fundamental tensor depends on velocity, so weighting the regression by \(g_{u_t}\)
+      weights every sample by its own target. The population minimizer stops being the marginal flow and the
+      generated distribution collapses toward the slow direction. Any weight \(M(t,q_t)\) is safe; this one is
+      not. The paper proves it and shows the collapse on a three-mode target.</p>
+    </div>
+  </div>
+
+  <p class="small muted">Both statements are specific to non-reversible geometry: in the Riemannian case
+  \(g_v\equiv g(q)\), the gradient identity holds, and the metric-weighted loss is admissible.</p>
+</div></section>
+
+<!-- ================================================================= 04 -->
+<section id="results"><div class="wrap">
+  <div class="sec-no">04 / Evidence</div>
+  <h2>Time-optimal, and fast to ask</h2>
+
+  <h3>Pose planning on SE(2)</h3>
+  <div class="tbl">
+  <table>
+    <caption>192 held-out start poses, quadruped-class envelope. Executed travel time over the best-known
+    reference time, split by where the goal is. Every planner reaches every goal.</caption>
+    <thead><tr><th>Conditional path geometry</th><th>Goal ahead</th><th>Goal to the side</th><th>Goal behind</th><th>All</th></tr></thead>
+    <tbody>
+      <tr><td>Euclidean interpolation (OT-CFM)</td><td>1.237</td><td>1.299</td><td>1.183</td><td>1.254</td></tr>
+      <tr><td>Symmetric Riemannian geodesics</td><td>1.000</td><td>1.100</td><td>1.093</td><td>1.073</td></tr>
+      <tr class="ours"><td>Finsler geodesics (ours)</td><td class="good">0.960</td><td class="good">0.985</td><td class="good">0.986</td><td class="good">0.979</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="small muted">A grid reference is an upper bound, so a ratio below one cannot by itself prove
+  optimality. Re-scoring the same plans against <b>exact shooting geodesics</b>, on the poses where the grid
+  certifies the geodesic minimal, removes that bias: Finsler <b>0.998</b>, symmetric Riemannian 1.064,
+  Euclidean 1.212. The remaining gap below one is the 0.2 m position tolerance, which lets a plan stop
+  marginally short. Optimality here is verified, not inferred.</p>
+
+  <h3>Learn the envelope from noisy rollouts, then plan with it</h3>
+  <div class="tbl">
+  <table>
+    <caption>The true envelope is a box that lies outside every metric family we fit. Plans are made under the
+    fitted geometry and executed under the true envelope, 96 poses.</caption>
+    <thead><tr><th>Fitted geometry</th><th>Indicatrix error</th><th>Mean time ratio</th><th>Worst</th></tr></thead>
+    <tbody>
+      <tr><td>Symmetric (Riemannian)</td><td>15.1 %</td><td>1.126</td><td>1.74</td></tr>
+      <tr><td>Randers</td><td>9.0 %</td><td>1.036</td><td>1.14</td></tr>
+      <tr class="ours"><td><i>p</i>-sum Finsler (ours)</td><td class="good">7.2 %</td><td class="good">1.023</td><td class="good">1.12</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Throwing the asymmetry away costs 13 % on average and 74 % in the worst case. Even a crude one-term
+  Randers fit, 9 % wrong on the envelope, plans within 3.6 % of the true optimum — time-optimal paths use the
+  forward and turning faces, which every asymmetric fit captures.</p>
+
+  <h3>What amortization buys</h3>
+  <div class="tbl">
+  <table>
+    <caption>Per-query wall-clock on one CPU, no GPU. The learned flow answers queries the solvers that
+    produced its training data cannot answer at interactive rates.</caption>
+    <thead><tr><th>Method</th><th>Plane</th><th>SE(2)</th></tr></thead>
+    <tbody>
+      <tr><td>Shooting boundary value problem</td><td>22 s</td><td>75 s</td></tr>
+      <tr><td>Grid search, per new goal</td><td>11 ms <span class="muted">+ 0.14 s build</span></td><td>330 ms <span class="muted">+ 9.9 s build</span></td></tr>
+      <tr class="ours"><td>Finsler flow, single query</td><td class="good">13 ms</td><td class="good">29 ms</td></tr>
+      <tr class="ours"><td>Finsler flow, batch of 100</td><td class="good">0.7 ms</td><td class="good">1.5 ms</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>The sharper point is <b>what the query ranges over</b>. A grid reference is built for one metric: change
+  the envelope — the robot picked up a payload, the terrain changed, the battery sagged — and the graph is
+  rebuilt from scratch, which is the 0.14 s and 9.9 s above rather than the per-goal sweep. The
+  envelope-conditioned field answers a start, a goal <em>and an envelope it has never seen</em> in the same
+  13–29 ms. Amortizing over capability is a difference in kind, not a constant factor, and it is the regime a
+  robot whose envelope drifts during operation actually lives in.</p>
+
+  <div class="grid2">
+    <div class="card key"><h4>Capability it has never seen</h4>
+    <p>One field conditioned on the drift strength, trained on β ∈ [0.30, 0.85], stays time-optimal at
+    β = 0.90 and 0.95 — 0.999 and 1.000 — where the Euclidean baseline degrades to 2.5× and 3.7×.
+    The planner learned the geometry as a function of capability, not one environment's answer.</p></div>
+    <div class="card key"><h4>Obstacles</h4>
+    <p>Entered as a conformal factor that preserves the Randers form. 91 % reach, zero collisions,
+    median 0.999× optimal, worst 1.05×. The wind-blind Riemannian baseline collides on 5 % of queries.</p></div>
+    <div class="card key"><h4>Closed loop</h4>
+    <p>Re-evaluated every 50 ms and projected onto the envelope, the same field is a feedback law. Under slip,
+    unmodeled lateral drift and repeated 0.3 m pushes it matches or beats greedy descent of the reference
+    value function, reaching every goal.</p></div>
+    <div class="card key"><h4>Feasible by construction</h4>
+    <p>Commands are projected onto the measured envelope, \(\xi_{\mathrm{cmd}}=v_\theta/F(q,v_\theta)\),
+    so what the planner asks for is always something the robot can do.</p></div>
+  </div>
+</div></section>
+
+<!-- ================================================================= 05 -->
+<section id="resources"><div class="wrap">
+  <div class="sec-no">05 / Read &amp; explore</div>
+  <h2>Paper, supplement, code</h2>
+  <div class="btns">
+    <a class="btn" href="assets/finsler_flow_matching_paper.pdf">Paper PDF</a>
+    <a class="btn alt" href="assets/finsler_flow_matching_supplement.pdf">Supplement PDF</a>
+    <a class="btn alt" href="assets/finsler_code.zip">Code ZIP</a>
+  </div>
+  <p class="small muted">The supplement carries the closed forms, the proofs, the loss-weight experiment, the
+  full result tables and the grid convergence study. The code ZIP contains the Finsler library, the
+  experiments and the MuJoCo pipeline; every number in the paper maps to a script in its README.</p>
+
+  <h3>Cite</h3>
+<pre>@inproceedings{finslerflowmatching,
+  title     = {There and Back Are Not the Same:
+               Finsler Flow Matching for Asymmetric Robot Planning},
+  author    = {Anonymous},
+  booktitle = {Under review},
+  year      = {2026}
+}</pre>
+
+  <h3>Research lineage</h3>
+  <div class="lineage">
+    <span class="node"><b>CAMP-MPPI</b>Dynamics-level wrench constraints</span>
+    <span class="arrow">→</span>
+    <span class="node"><b>UP-MPPI</b>Explicit margins and adaptation</span>
+    <span class="arrow">→</span>
+    <span class="node now"><b>Finsler Flow Matching</b>Asymmetric capability as geometry</span>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="ftitle">Finsler Flow Matching</div>
+  <p class="small muted" style="margin:6px auto 18px">There and Back Are Not the Same ·
+  Simulation study, hardware in progress · RCI Lab, Kyung Hee University</p>
+  <a href="#main">Back to top ↑</a>
+</div></footer>
+</body>
+</html>
