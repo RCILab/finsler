@@ -195,7 +195,8 @@ pre{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;p
   <div class="sec-no">02 / See it in motion</div>
   <h2>The same goal, two geometries</h2>
   <p class="lead">Every video below compares planners that receive the same information and differ only in
-  the geometry of the paths they were trained on. Clocks run in real time.</p>
+  the geometry they plan with. Clocks run in real time. The comparison runs across four bodies: a
+  humanoid, a drift field, a manipulator, and a mobile manipulator.</p>
 
   <h3>A goal behind the robot</h3>
   <figure>
@@ -222,6 +223,40 @@ pre{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;p
     <figcaption><b>Same robot, goal 2 m to the side.</b> The symmetric planner sidesteps at the averaged
     speed; the asymmetric one turns into its fast direction. <b>3.98 s</b> against 5.20 s, a 23 % saving.</figcaption>
     <div class="vmeta">same identified envelope · same feedback rule · real time</div>
+  </figure>
+
+  <h3>Not only legs: an arm, and effective mass</h3>
+  <p>A manipulator looks like the symmetric case until you ask what limits it. Effective mass
+  \(m_{\mathrm{eff}}(u)=(u^\top\Lambda^{-1}u)^{-1}\) is quadratic in \(u\), so by itself it is reversible.
+  The asymmetry arrives with the constraint: capping the energy transferred on contact bounds how fast the
+  arm may <em>close</em> on a workpiece, by \(\sqrt{2E_{\max}/m_{\mathrm{eff}}}\), and leaves retreat
+  unbounded.</p>
+  <figure>
+    <video src="assets/v5_arm_effective_mass.mp4" autoplay loop muted playsinline controls></video>
+    <figcaption><b>Two-link arm reaching a workpiece under a power-and-force limit.</b> The dotted outline
+    is the velocity envelope at the end effector, and it is visibly one sided. The symmetrised metric keeps
+    every bit of the anisotropy and discards only the asymmetry, which is enough to cost it <b>6.1 %</b>;
+    an isotropic metric costs 10.5 %. The time-optimal plan moves across the constraint and closes from the
+    direction in which the arm is light.</figcaption>
+    <div class="vmeta">exact polytope gauge · grid reference under the true envelope · real time</div>
+  </figure>
+
+  <p>Gravity, by contrast, changes nothing about the routes, and our own theory says why: gravitational
+  power is the derivative of a potential, so the asymmetric part of the metric is a closed one-form and
+  only travel times change. The symmetrised metric plans within 0.3 % of optimal. Asymmetries that move
+  routes are the ones with non-vanishing curl.</p>
+
+  <h3>A mobile manipulator, where the two cases compose</h3>
+  <figure>
+    <video src="assets/v6_mobile_manipulator.mp4" autoplay loop muted playsinline controls></video>
+    <figcaption><b>Skid-steer base carrying the arm.</b> The achievable end-effector twist is the
+    <em>Minkowski sum</em> of what the base can do and what the arm can do, so the support functions add,
+    \(F^{*}=F^{*}_{\mathrm{base}}+F^{*}_{\mathrm{arm}}\). The base has no lateral velocity at all, yet the
+    sum is full dimensional because the arm supplies exactly that direction: what survives of the
+    nonholonomy is asymmetry, not degeneracy. The end effector reaches 1.28 m/s forward against 0.58
+    backward. Ignoring that costs the symmetrised metric <b>8.6 %</b> and an isotropic metric 57 %, the
+    largest penalty we measured.</figcaption>
+    <div class="vmeta">12-vertex polytope envelope · left-invariant on SE(2) · real time</div>
   </figure>
 
   <h3>When the environment is the asymmetry</h3>

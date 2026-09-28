@@ -28,6 +28,7 @@ python tests/run_tests_se2.py        # 17개
 | III-D, Fig. 4c | latency 표 | `experiments/latency.py` | `results/latency/` |
 | III-D, Fig. 4d | 폐루프 외란 (BC·Dijkstra 포함) | `experiments/closed_loop.py` | `results/closed_loop/` |
 | III-B, Suppl. 정확 기준 | 정확한 측지선 대비 0.998 / 1.064 / 1.212 | `experiments/se2_refined_reference.py` | `results/fm_planner_se2/se2_refined_reference.md` |
+| (논문 미반영) 외부 베이스라인 | 같은 측지선으로 학습한 궤적 회귀·궤적 확산모델과 비교 | `experiments/external_baselines.py` (SE(2)), `experiments/external_baselines_planar.py` (평면) | `results/external_baselines/` |
 | Suppl. 격자 수렴 | 평면 +0.4%, SE(2) +2~3% | `experiments/grid_convergence.py` | `results/grid_convergence/` |
 | Suppl. 손실 가중 실험 | ED 0.35/0.93/1.28 대 0.002 | `experiments/fm_loss_weight.py` | `results/fm_loss_weight.md`, `.png` |
 | Suppl. 데모 추종 안정화 | \|δ\|=0.8에서 −13% | `experiments/fm_path_benefit.py` | `results/fm_path_beta0.9/`, `results/fm_path_beta0.7/` |
