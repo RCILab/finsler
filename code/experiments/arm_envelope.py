@@ -1,7 +1,9 @@
 """Manipulator task-space planning under a non-reversible velocity envelope.
 
-A two-link planar arm in the vertical plane, carrying a payload, actuated by joints with speed limits
-and a budget on the gravitational power it may consume.  Writing u = J(q)^{-1} v for the joint velocity
+The shoulder-elbow plane of a UR5: joints 2 and 3 move the wrist in a vertical plane, joint 1 rotates
+that plane, so the planar reduction carries the arm's real link lengths (0.425 m upper arm, 0.392 m
+forearm), link masses and 120 deg/s joint speed limit, with the rated 5 kg payload at the tip.  The
+joints are additionally given a budget on the gravitational power they may consume.  Writing u = J(q)^{-1} v for the joint velocity
 that realises an end-effector velocity v, the achievable set is
 
     B(x) = { v : |u_i| <= w_i ,  g(q)^T u <= P_max }
@@ -44,8 +46,9 @@ G_ACC = 9.81
 class Arm:
     """Two-link planar arm in the vertical plane, elbow-up branch."""
 
-    def __init__(self, l1=0.5, l2=0.5, m1=2.0, m2=2.0, payload=3.0, w=(2.0, 2.0), p_max=30.0,
-                 workpiece=None, e_max=2.0, zone=0.35, r_min=0.28, r_max=0.92):
+    def __init__(self, l1=0.425, l2=0.392, m1=8.39, m2=3.50, payload=5.0,
+                 w=(2.094, 2.094), p_max=60.0,
+                 workpiece=None, e_max=2.0, zone=0.35, r_min=0.26, r_max=0.76):
         self.l1, self.l2, self.m1, self.m2, self.mp = l1, l2, m1, m2, payload
         self.w = np.asarray(w, float)
         self.p_max = p_max
@@ -204,7 +207,7 @@ def exec_time(arm, pts):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--payload", type=float, default=3.0)
+    ap.add_argument("--payload", type=float, default=5.0)
     ap.add_argument("--h", type=float, default=0.02)
     ap.add_argument("--workpiece", default="", help="'x,y' to enable the safe-approach constraint")
     ap.add_argument("--e-max", type=float, default=2.0)
@@ -217,11 +220,12 @@ def main():
     if wp is not None:
         print(f"safe-approach constraint active: workpiece at {wp}, E_max {args.e_max} J, zone {args.zone} m")
     # kept away from the singular boundary (r -> l1 + l2) and from the folded configuration (r -> 0)
-    xlim, ylim = (-0.70, 0.70), (-0.10, 0.80)
-    print(f"two-link arm, payload {args.payload} kg, joint speed limits {arm.w}, power budget {arm.p_max} W")
+    xlim, ylim = (-0.60, 0.60), (-0.10, 0.70)
+    print(f"UR5 shoulder-elbow plane: links {arm.l1}/{arm.l2} m, payload {args.payload} kg, "
+          f"joint speed {arm.w[0]:.2f} rad/s (120 deg/s), gravitational power budget {arm.p_max} W")
 
     # ---- how asymmetric is the envelope, really? -------------------------------------------------
-    probes = np.array([[0.55, 0.30], [0.0, 0.70], [-0.45, 0.35], [0.35, 0.55]])
+    probes = np.array([[0.50, 0.25], [0.0, 0.60], [-0.40, 0.30], [0.30, 0.48]])
     up, dn, lf, rt = [], [], [], []
     for p in probes:
         s = arm.max_speed(p, np.array([[0, 1.0], [0, -1.0], [-1.0, 0], [1.0, 0]]))
@@ -245,16 +249,16 @@ def main():
     print(f"  four grids built ({grids['true'].n_edges/1e6:.1f}M edges each, {time.time()-t0:.0f}s)", flush=True)
 
     # ---- queries: lift the payload and put it down ------------------------------------------------
-    queries = [(np.array([0.55, 0.05]), np.array([0.05, 0.75]), "lift, out to up"),
-               (np.array([0.05, 0.75]), np.array([0.55, 0.05]), "lower, up to out"),
-               (np.array([-0.5, 0.15]), np.array([0.5, 0.15]), "traverse, left to right"),
-               (np.array([0.45, 0.60]), np.array([-0.45, 0.20]), "across and down")]
+    queries = [(np.array([0.50, 0.00]), np.array([0.05, 0.62]), "lift, out to up"),
+               (np.array([0.05, 0.62]), np.array([0.50, 0.00]), "lower, up to out"),
+               (np.array([-0.45, 0.10]), np.array([0.45, 0.10]), "traverse, left to right"),
+               (np.array([0.40, 0.50]), np.array([-0.40, 0.15]), "across and down")]
     if arm.workpiece is not None:
         wp = arm.workpiece
-        queries = [(np.array([-0.45, 0.55]), wp.copy(), "reach the workpiece from upper left"),
-                   (np.array([0.55, 0.55]), wp.copy(), "reach the workpiece from upper right"),
-                   (np.array([-0.55, 0.05]), wp.copy(), "reach the workpiece from lower left"),
-                   (np.array([0.10, 0.75]), wp.copy(), "reach the workpiece from above")]
+        queries = [(np.array([-0.40, 0.45]), wp.copy(), "reach the workpiece from upper left"),
+                   (np.array([0.48, 0.42]), wp.copy(), "reach the workpiece from upper right"),
+                   (np.array([-0.48, 0.05]), wp.copy(), "reach the workpiece from lower left"),
+                   (np.array([0.05, 0.62]), wp.copy(), "reach the workpiece from above")]
 
     rows = []
     for s, g, label in queries:
@@ -275,8 +279,9 @@ def main():
     fin_r = np.array([r["finsler"] for r in rows])
     sym_r = np.array([r["symmetric"] for r in rows])
     euc_r = np.array([r["euclid"] for r in rows])
-    lines = ["# Two-link arm: planning under a non-reversible task-space velocity envelope", "",
-             f"Payload {args.payload} kg, joint speed limits {arm.w.tolist()} rad/s, gravitational power "
+    lines = ["# UR5 (shoulder-elbow plane): planning under a non-reversible task-space velocity envelope", "",
+             f"UR5 link lengths {arm.l1}/{arm.l2} m, payload {args.payload} kg, joint speed "
+             f"{arm.w[0]:.2f} rad/s (120 deg/s), gravitational power "
              f"budget {arm.p_max} W. The envelope is the exact achievable end-effector velocity set; its gauge "
              "is non-reversible because the power budget binds only when the motion consumes gravitational "
              "power.", "",

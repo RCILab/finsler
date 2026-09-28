@@ -1,6 +1,15 @@
 """Mobile manipulator: the end-effector velocity envelope is a Minkowski sum, and it is non-reversible.
 
-A skid-steer base carries a two-link planar arm held at a nominal posture.  Writing p0 for the
+A Clearpath Husky base (differential drive, forward-facing perception so reverse is speed limited)
+carries a Franka Emika arm.  The arm is not frozen: its reach is a capability parameter, and the
+end-effector envelope is reported and planned for at several arm extensions, exactly as payload is
+treated elsewhere in the paper.
+
+Why the arm posture is a parameter rather than a planned coordinate: putting the base pose and the arm
+joints in one state makes the *system* nonholonomic, since the base cannot slide sideways, and the
+reachable set in that state space is lower dimensional -- a sub-Finsler problem, which this paper
+explicitly excludes.  The projection onto the end effector is full dimensional, and that projection is
+where the Finsler structure lives.  Writing p0 for the
 end-effector offset in the body frame, the achievable end-effector twist is
 
     (xi_ee, omega) = (v_b + omega * z_hat x p0 + J_a qdot_a ,  omega),
@@ -146,22 +155,30 @@ def main():
     ap.add_argument("--vx-fwd", type=float, default=1.0)
     ap.add_argument("--vx-back", type=float, default=0.3)
     ap.add_argument("--w-max", type=float, default=1.0)
-    ap.add_argument("--qd", type=float, default=1.2)
+    ap.add_argument("--qd", type=float, default=2.175)
+    ap.add_argument("--l1", type=float, default=0.316)
+    ap.add_argument("--l2", type=float, default=0.384)
+    ap.add_argument("--posture", default="working", choices=["retracted", "working", "extended"])
     args = ap.parse_args()
 
     bv = base_vertices(args.vx_back, args.vx_fwd, args.w_max)
-    av, p0 = arm_vertices(0.35, 0.30, (0.5, 0.9), (args.qd, args.qd))
-    ee = EEPolytope(bv, av, p0)
+    print(f"Husky base: forward {args.vx_fwd}, backward {args.vx_back} m/s (perception faces forward), "
+          f"yaw {args.w_max} rad/s, no lateral velocity")
+    print(f"Franka arm: links {args.l1}/{args.l2} m, joint speed {args.qd} rad/s")
+    postures = {"retracted": (2.0, 1.9), "working": (0.9, 1.5), "extended": (0.35, 0.55)}
+    fields = {}
+    for pname, q_nom in postures.items():
+        av, p0 = arm_vertices(args.l1, args.l2, q_nom, (args.qd, args.qd))
+        f = EEPolytope(bv, av, p0)
+        s = f.speeds()
+        fields[pname] = (f, p0, s)
+        print(f"  arm {pname:9s} reach {np.linalg.norm(p0):.2f} m: forward {s['forward']:.2f}, "
+              f"backward {s['backward']:.2f} (ratio {s['forward']/s['backward']:.2f}), "
+              f"lateral {s['left']:.2f}, {len(f.vertices)} vertices")
+    ee, p0, sp = fields[args.posture]
     sym, iso = Symmetrised(ee), Isotropic(ee, args.w_max)
-    sp = ee.speeds()
-    print(f"skid-steer base: forward {args.vx_fwd}, backward {args.vx_back} m/s, yaw {args.w_max} rad/s, "
-          f"no lateral velocity")
-    print(f"arm at nominal posture, end-effector offset ({p0[0]:.2f}, {p0[1]:.2f}) m in the body frame")
-    print("end-effector envelope (Minkowski sum), max speeds:")
-    print("   " + ", ".join(f"{k} {v:.2f}" for k, v in sp.items()))
-    print(f"   forward/backward ratio {sp['forward']/sp['backward']:.2f}; lateral {sp['left']:.2f} m/s "
-          f"comes entirely from the arm, since the base has none")
-    print(f"   polytope: {len(ee.vertices)} vertices, {len(ee.A)} facets")
+    print(f"planning at the '{args.posture}' extension; the lateral {sp['left']:.2f} m/s comes entirely "
+          f"from the arm, since the base has none")
 
     t0 = time.time()
     grids = {name: GridSE2Distance(f, (-2.6, 2.6), (-2.6, 2.6), args.h, args.ntheta)
@@ -193,10 +210,11 @@ def main():
     fin = np.array([r["true"] for r in rows])
     sy = np.array([r["symmetric"] for r in rows])
     eu = np.array([r["euclid"] for r in rows])
-    lines = ["# Mobile manipulator: end-effector planning under a Minkowski-sum envelope", "",
-             f"Skid-steer base (forward {args.vx_fwd}, backward {args.vx_back} m/s, yaw {args.w_max} rad/s, no "
-             f"lateral velocity) carrying a two-link arm at a nominal posture with the end effector "
-             f"{np.linalg.norm(p0):.2f} m from the base origin.", "",
+    lines = ["# Husky + Franka: end-effector planning under a Minkowski-sum envelope", "",
+             f"Husky base (forward {args.vx_fwd}, backward {args.vx_back} m/s because perception faces "
+             f"forward, yaw {args.w_max} rad/s, no lateral velocity) carrying a Franka arm "
+             f"(links {args.l1}/{args.l2} m, joint speed {args.qd} rad/s) at the '{args.posture}' "
+             f"extension, end effector {np.linalg.norm(p0):.2f} m from the base origin.", "",
              "The achievable end-effector twist set is the Minkowski sum of the base and arm contributions, a "
              f"polytope with {len(ee.vertices)} vertices. It is full dimensional even though the base has no "
              "lateral velocity, because the arm supplies that direction; what remains is asymmetry rather than "
@@ -214,14 +232,14 @@ def main():
                      f"| {r['euclid']:.3f} |")
     lines += ["", f"Mean over the {len(rows)} tasks: Finsler {fin.mean():.3f}, symmetric {sy.mean():.3f}, "
               f"isotropic {eu.mean():.3f}."]
-    (OUT / "mobile_manipulator.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    np.savez(OUT / "mobile_paths.npz", vertices=ee.vertices, p0=p0,
+    (OUT / f"mobile_manipulator_{args.posture}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    np.savez(OUT / f"mobile_paths_{args.posture}.npz", vertices=ee.vertices, p0=p0,
              **{f"{r['task'].replace(' ', '_').replace(',', '')}__{n}": r[n + "_path"]
                 for r in rows for n in ("true", "symmetric", "euclid") if n + "_path" in r})
     json.dump(dict(speeds=sp, finsler=float(fin.mean()), symmetric=float(sy.mean()),
-                   isotropic=float(eu.mean())), open(OUT / "mobile_manipulator.json", "w"), indent=1)
+                   isotropic=float(eu.mean())), open(OUT / f"mobile_manipulator_{args.posture}.json", "w"), indent=1)
     print(f"\nmean: Finsler {fin.mean():.3f}, symmetric {sy.mean():.3f}, isotropic {eu.mean():.3f}")
-    print("wrote", OUT / "mobile_manipulator.md")
+    print("wrote", OUT / f"mobile_manipulator_{args.posture}.md")
 
 
 if __name__ == "__main__":
