@@ -2,7 +2,8 @@
 
 **There and Back Are Not the Same: Finsler Flow Matching for Asymmetric Robot Planning**
 
-Project page: **https://rcilab.github.io/finsler/**
+Project page: **https://rcilab.khu.ac.kr/finsler/**
+(`rcilab.github.io/finsler` redirects here)
 
 A legged robot walks forward faster than it walks backward, and sideways slower still. Reversible
 geometry cannot express that: a Riemannian metric measures `‖v‖ = ‖−v‖`. We take the gauge function of
