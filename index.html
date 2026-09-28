@@ -232,13 +232,13 @@ pre{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;p
   arm may <em>close</em> on a workpiece, by \(\sqrt{2E_{\max}/m_{\mathrm{eff}}}\), and leaves retreat
   unbounded.</p>
   <figure>
-    <video src="assets/v5_arm_effective_mass.mp4" autoplay loop muted playsinline controls></video>
-    <figcaption><b>UR5 shoulder-elbow plane reaching a workpiece under a power-and-force limit.</b> The dotted outline
-    is the velocity envelope at the end effector, and it is visibly one sided. The symmetrised metric keeps
+    <video src="assets/v5_ur5_effective_mass.mp4" autoplay loop muted playsinline controls></video>
+    <figcaption><b>A UR5e reaching a workpiece under a power-and-force limit, rendered in MuJoCo.</b> The dotted
+    trail is the path each plan actually walks; the black sphere is the workpiece. The symmetrised metric keeps
     every bit of the anisotropy and discards only the asymmetry, which is enough to cost it <b>7.7 %</b>;
     an isotropic metric costs 13.7 %. The time-optimal plan moves across the constraint and closes from the
     direction in which the arm is light.</figcaption>
-    <div class="vmeta">exact polytope gauge · grid reference under the true envelope · real time</div>
+    <div class="vmeta">MuJoCo UR5e (mujoco_menagerie) · joint angles solved against the model · real time</div>
   </figure>
 
   <p>Gravity, by contrast, changes nothing about the routes, and our own theory says why: gravitational
